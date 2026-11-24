@@ -861,6 +861,16 @@
   }
   .yr-chip.tba { background: transparent; color: var(--c); border-style: dashed; }
   .yr-chip.past { opacity: .55; }
+
+  .msum-head { display: flex; align-items: baseline; justify-content: space-between; margin: 6px 2px 10px; }
+  .msum-head h2 { margin: 0; font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-size: 22px; }
+  .msum-head .hint { font-size: 11px; color: var(--ink-3); }
+  .msum { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .msum .mcard.past { opacity: .6; }
+  .msum .mlist li { align-items: baseline; }
+  .msum .mcard-name em { font-style: normal; }
+  .msum .mcard-top { margin-bottom: 10px; }
+  .msum .mlist { gap: 6px; }
   .yr-chip:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
 
   .lane-edit {
@@ -998,6 +1008,11 @@
         <span class="legend"><i class="sw dashed"></i> Date to be confirmed</span>
         <span style="margin-left:auto; color:var(--ink-3)">Quarterly meetings span their quarter until a date is set</span>
       </div>
+    </section>
+
+    <section class="msum-wrap" aria-label="Monthly summary">
+      <div class="msum-head"><h2>Month by month</h2><span class="hint" id="msumHint"></span></div>
+      <div id="monthSummary" class="msum"></div>
     </section>
 
     <aside class="rail">
@@ -1912,6 +1927,42 @@
     return dated.join(" · ");
   }
 
+  function renderMonthSummary() {
+    var box = document.getElementById("monthSummary");
+    box.innerHTML = "";
+    var nowAbs = W.today.getFullYear() * 12 + W.today.getMonth();
+    var vis = visibleMeetings();
+    var tba = vis.filter(function (o) { return !o.date; }).length;
+    document.getElementById("msumHint").textContent = tba + (tba === 1 ? " date" : " dates") + " to confirm";
+    for (var m = 0; m < 12; m++) {
+      var inM = vis.filter(function (o) { return colOf(o) === m; });
+      inM.sort(function (a, b) {
+        if (!!a.date !== !!b.date) return a.date ? -1 : 1;
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return SERIES.indexOf(seriesOf(a.series)) - SERIES.indexOf(seriesOf(b.series));
+      });
+      var abs = year * 12 + m;
+      var card = document.createElement("div");
+      card.className = "mcard" + (abs === nowAbs ? " now" : "") + (abs < nowAbs ? " past" : "");
+      var html = '<div class="mcard-top"><div class="mcard-name">' + MONTH_FULL[m] + '<em> ' + year + '</em></div>' +
+        '<div class="mcard-count">' + inM.length + '<small>' + (inM.length === 1 ? "MEETING" : "MEETINGS") + '</small></div></div>';
+      if (inM.length) {
+        html += '<ul class="mlist">';
+        inM.forEach(function (o) {
+          var s = seriesOf(o.series);
+          var when = o.date ? (WEEKDAY[d(o.date).getDay()] + " " + d(o.date).getDate()) : (isQuarter(o) ? "Q" + (o.q + 1) + " · TBA" : "TBA");
+          html += '<li><span class="dot" style="background:var(' + s.varName + ')"></span>' +
+                  '<span class="t">' + esc(s.name) + '</span><span class="yr-when">' + esc(when) + '</span></li>';
+        });
+        html += '</ul>';
+      } else {
+        html += '<div class="mcard-empty">Nothing scheduled.</div>';
+      }
+      card.innerHTML = html;
+      box.appendChild(card);
+    }
+  }
+
   function renderYearRail() {
     var rail = document.getElementById("yearRail");
     rail.innerHTML = "";
@@ -2098,6 +2149,7 @@
       renderSeriesFilters();
       renderYear();
       renderYearRail();
+      renderMonthSummary();
     } else {
       renderFilters();
       renderTimeline();
@@ -2565,7 +2617,7 @@
   /* ================= JSONBin shared storage =================
      Paste your bin ID between the quotes. Everything (meeting types, dates, notes)
      lives in that one bin. Anyone can read a public bin; editing needs the access key. */
-  var BIN_ID = "6af67bf8ffd5d16053bda7ad";
+  var BIN_ID = "6b0515f0ac6210605a9f9f29";
   var binSet = BIN_ID.indexOf("PASTE") < 0;
   var API = "https://api.jsonbin.io/v3/b/" + BIN_ID;
   var binKey = "";
